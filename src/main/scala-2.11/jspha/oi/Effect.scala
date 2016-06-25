@@ -7,9 +7,9 @@ package jspha.oi
   * Partial[B]]` indicating that when this effect is (later) performed it
   * will return a `B` so long as it doesn't hit an exception.
   */
-case class Effect[-Req, +Resp, +A](ffi: Req => Resp,
-                                   request: Req,
-                                   continue: Either[Throwable, Resp] => A) {
+case class Effect[Req, Resp, +A](ffi: Req => Resp,
+                                 request: Req,
+                                 continue: Either[Throwable, Resp] => A) {
 
   def map[B](f: A => B): Effect[Req, Resp, B] =
     Effect.map(f)(this)
@@ -34,24 +34,16 @@ object Effect {
   }
 
   /**
-    * Create a raw effect, choosing how to interpret the FFI response.
-    */
-  protected def apply[Req, Resp, A](ffi: Req => Resp,
-                                    request: Req,
-                                    continue: Partial[Resp] => A): Effect[Req, Resp, A] =
-    new Effect[Req, Resp, A](ffi, request, continue)
-
-  /**
     * Create a parameterized effect.
     */
   def apply[Req, Resp](ffi: Req => Resp)(request: Req): Effect[Req, Resp, Partial[Resp]] =
-    apply[Req, Resp, Partial[Resp]](ffi, request, identity)
+    apply[Req, Resp, Partial[Resp]](ffi, request, identity _)
 
   /**
     * Create an effect from a thunk.
     */
   def apply[Resp](ffi: => Resp): Effect[Unit, Resp, Partial[Resp]] =
-    apply[Unit, Resp, Partial[Resp]](_ => ffi, (), identity)
+    apply[Unit, Resp, Partial[Resp]]((_: Unit) => ffi, (), identity _)
 
   /**
     * Transform the return parameter of an Effect
@@ -63,7 +55,7 @@ object Effect {
     * Capture exceptions immediately.
     */
   def observing[Req, Resp, A](fa: Effect[Req, Resp, A]): Effect[Req, Resp, Partial[A]] =
-    Effect(fa.ffi, fa.request, {
+    Effect[Req, Resp, Partial[A]](fa.ffi, fa.request, {
       case Left(thrown) => Left(thrown)
       case Right(a) => Right(fa.continue(Right(a)))
     })

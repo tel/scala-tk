@@ -31,7 +31,7 @@ object Tk {
   def eff[Req, Resp](ffi: Req => Resp)(request: Req): Tk[Partial[Resp]] =
     new Tk[Partial[Resp]] {
       def apply[R](pure: Partial[Resp] => R, run: Runner[R]) =
-        run(Effect(ffi, request, pure))
+        run(Effect[Req, Resp, R](ffi, request, pure))
     }
 
   def eff[Resp](ffi: => Resp): Tk[Partial[Resp]] = new Tk[Partial[Resp]] {
@@ -45,7 +45,7 @@ object Tk {
   def optionEff[Req, Resp](ffi: Req => Resp)(request: Req): Tk[Option[Resp]] =
     new Tk[Option[Resp]] {
       def apply[R](pure: Option[Resp] => R, run: Runner[R]) =
-        run(Effect(ffi, request, {
+        run(Effect[Req, Resp, R](ffi, request, {
           case Left(_) => pure(Option.empty)
           case Right(a) => pure(Option(a))
         }))
@@ -95,7 +95,7 @@ object Tk {
     def eff[Req, Resp](ffi: Req => Resp)(request: Req): Tk[Resp] =
       new Tk[Resp] {
         def apply[R](pure: Resp => R, run: Runner[R]) =
-          run(Effect(ffi, request, {
+          run(Effect[Req, Resp, R](ffi, request, {
             case Left(throwable) => throw new RuntimeException(
               "Effect created via Unsafe.eff had exception!",
               throwable

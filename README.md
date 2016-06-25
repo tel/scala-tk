@@ -8,7 +8,28 @@ can be combined purely and then executed all at once later.
 
 ## Example
 
-tk.
+```scala
+class Main extends App {
+
+  def write(string: String): Tk[Unit] =
+    Tk.Unsafe.eff(println)(string)
+
+  def read: Tk[String] =
+    Tk.Unsafe.effThunk {
+      scala.io.StdIn.readLine()
+    }
+
+  val tk: Tk[Unit] =
+    for {
+      _ <- write("Echo echo echo...")
+      line <- read
+      _ <- write(line)
+    } yield ()
+
+  Tk.Unsafe.perform(tk)
+
+}
+```
 
 ## Theory
 
