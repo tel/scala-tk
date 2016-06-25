@@ -11,14 +11,18 @@ can be combined purely and then executed all at once later.
 ```scala
 class Main extends App {
 
+  // Create new safe effect-presentations using Unsafe.eff
   def write(string: String): Tk[Unit] =
     Tk.Unsafe.eff(println)(string)
 
+  // If your effect doesn't take an argument, Unsafe.effThunk may be
+  // slightly more convenient.
   def read: Tk[String] =
     Tk.Unsafe.effThunk {
       scala.io.StdIn.readLine()
     }
 
+  // Compose Tk[A] values using for-comprehensions
   val tk: Tk[Unit] =
     for {
       _ <- write("Echo echo echo...")
@@ -26,6 +30,8 @@ class Main extends App {
       _ <- write(line)
     } yield ()
 
+  // Then, finally, when it's time to perform your effects do so
+  // using the Unsafe.perform function.
   Tk.Unsafe.perform(tk)
 
 }
