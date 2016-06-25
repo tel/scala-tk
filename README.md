@@ -1,5 +1,5 @@
 
-# Oi!: message-passing effect monad
+# *Oi!* message-passing effect monad
 
 *Oi* aims to be an efficient, well-behaved "impure effect wrapper 
 monad" in the same vein as Scalaz's `IO` and `Task` types. You can 
