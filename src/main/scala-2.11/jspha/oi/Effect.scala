@@ -2,7 +2,7 @@ package jspha.oi
 
 case class Effect[-Req, +Resp, +A](ffi: Req => Resp,
                                    request: Req,
-                                   inject: Either[Throwable, Resp] => A) {
+                                   continue: Either[Throwable, Resp] => A) {
 
   def map[B](f: A => B): Effect[Req, Resp, B] =
     Effect.map(f)(this)
@@ -34,8 +34,8 @@ object Effect {
     */
   protected def apply[Req, Resp, A](ffi: Req => Resp,
                                     request: Req,
-                                    inject: Partial[Resp] => A): Effect[Req, Resp, A] =
-    new Effect[Req, Resp, A](ffi, request, inject)
+                                    continue: Partial[Resp] => A): Effect[Req, Resp, A] =
+    new Effect[Req, Resp, A](ffi, request, continue)
 
   /**
     * Create a parameterized effect.
@@ -53,7 +53,7 @@ object Effect {
     * Transform the return parameter of an Effect
     */
   def map[Req, Resp, A, B](f: A => B)(fa: Effect[Req, Resp, A]): Effect[Req, Resp, B] =
-    Effect(fa.ffi, fa.request, fa.inject andThen f)
+    Effect(fa.ffi, fa.request, fa.continue andThen f)
 
   /**
     * Capture exceptions immediately.
@@ -61,7 +61,7 @@ object Effect {
   def observing[Req, Resp, A](fa: Effect[Req, Resp, A]): Effect[Req, Resp, Partial[A]] =
     Effect(fa.ffi, fa.request, {
       case Left(thrown) => Left(thrown)
-      case Right(a) => Right(fa.inject(Right(a)))
+      case Right(a) => Right(fa.continue(Right(a)))
     })
 
   object Unsafe {
@@ -71,9 +71,9 @@ object Effect {
       */
     def perform[Req, Resp, A](eff: Effect[Req, Resp, A]): A =
       try {
-        eff.inject(Right(eff.ffi(eff.request)))
+        eff.continue(Right(eff.ffi(eff.request)))
       } catch {
-        case thrown: Throwable => eff.inject(Left(thrown))
+        case thrown: Throwable => eff.continue(Left(thrown))
       }
 
     def perform[A]: Runner[A] = new Runner[A] {
