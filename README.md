@@ -12,29 +12,30 @@ tk.
 
 ## Theory
 
-OI's `Task` is a certain kind of free monad over the *indexed store* 
-comonad. This provides message-passing semantics to "interacting 
+OI's `Tk` ("task" or "to come" in newspaper editor speak) is a 
+certain kind of free monad over the *indexed store* 
+comonad. This provides *message-passing* semantics to "interacting 
 with the real world" which are amenable to good models for 
 concurrent threaded computation (unlike `RealWorld` token passing 
 models if you're familiar with them).
 
-In particular, `Task` is the flattened form of a "codensity 
+In particular, `Tk` is the flattened form of a "codensity 
 transformed" Free monad structure applied to the Store comonad. 
 Even more particularly, it's not actually the `Codensity` of `Free`
 but instead a smaller structure with all of the desired properties 
 arising from applying `Yoneda` instead.
 
-To understand `Task` best, we can look at a simplified model of
+To understand `Tk` best, we can look at a simplified model of
 the free monad over the indexed store comonad
 
 ```scala
-sealed trait Taskish[+A]
-case class Pure[+A](a: A) extends Taskish[A]
+sealed trait Tkish[+A]
+case class Pure[+A](a: A) extends Tkish[A]
 case class Effect[-Req, +Resp, +A](
   ffi: FFIOperation[Request, Response],
   request: Request,
-  continue: Response => Taskish[A]
-) extends Taskish[A]
+  continue: Response => Tkish[A]
+) extends Tkish[A]
 ```
 
 This has the shape of a free monad embedding either a pure value 
@@ -46,14 +47,14 @@ that response to continue the computation.
 
 Assuming we have a method to send and receive messages to the 
 runtime using the `FFIOperation` type the interpretation behavior of 
-`Taskish` is now direct. Then, given that Scala is natively an 
+`Tkish` is now direct. Then, given that Scala is natively an 
 effectful language we immediately have
 
 ```scala
 type FFIOperation[-Req, +Resp] = Req => Resp
 ```
 
-In practice, the actual `Task` monad is identical to this except (a)
+In practice, the actual `Tk` monad is identical to this except (a)
 it uses a Yoneda transformed version of the Free monad for 
 efficiency and (b) it also contains an exception handler to properly
 account for the exceptions that may be thrown by `FFIOperation`s.
