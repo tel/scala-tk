@@ -83,7 +83,7 @@ object Tk {
     /**
       * Extract the pure value, running all intermediate effects.
       */
-    def peform[A](oi: Tk[A]): A =
+    def perform[A](oi: Tk[A]): A =
       oi[A](identity, Effect.Unsafe.perform[A])
 
     /**
@@ -104,7 +104,10 @@ object Tk {
           }))
       }
 
-    def eff[Resp](ffi: => Resp): Tk[Resp] = new Tk[Resp] {
+    /**
+      * Create an effect of no arguments identically to `eff`.
+      */
+    def effThunk[Resp](ffi: => Resp): Tk[Resp] = new Tk[Resp] {
       def apply[R](pure: Resp => R, run: Effect.Runner[R]) =
         run(Effect[Unit, Resp, R](_ => ffi, (), {
           case Left(throwable) => throw new RuntimeException(
