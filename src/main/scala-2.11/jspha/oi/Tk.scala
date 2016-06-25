@@ -2,6 +2,17 @@ package jspha.oi
 
 /**
   * Safe "unsafe effect" wrapper monad similar to Scalaz's `IO` type.
+  * Values of `Tk[A]` may be pure computations returning values `A` or
+  * chains of effectful computations which *eventually* return values `A`
+  * if they proceed unexceptionally.
+  *
+  * Basic, foundational elements of these `Tk` effect-chains can be built
+  * using the `Tk.eff` and `Tk.Unsafe.eff` combinators which wrap standard,
+  * side-effecting, unsafe Scala functions.
+  *
+  * When it is time to ultimately perform your `Tk` action to receive the
+  * result value you can use the function `Tk.Unsafe.perform` to run the
+  * effect chain and return the value.
   */
 trait Tk[+A] {
 
@@ -78,7 +89,8 @@ object Tk {
     /**
       * Create an effect discarding the exception handler. You must ensure
       * that the effect cannot raise exceptions. If you violate this rule
-      * then you may see exceptions thrown at construction time.
+      * then you may see exceptions thrown at runtime instead of being
+      * propagated.
       */
     def eff[Req, Resp](ffi: Req => Resp)(request: Req): Tk[Resp] =
       new Tk[Resp] {

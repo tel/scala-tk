@@ -1,5 +1,12 @@
 package jspha.oi
 
+/**
+  * An effect represents a "Thunked" effectful "FFI" call. Or, more
+  * concretely, if `ffi` is an effectful Scala function `A => B` then
+  * `Effect(ffi)` will be a *pure* Scala function `A => Effect[A, B,
+  * Partial[B]]` indicating that when this effect is (later) performed it
+  * will return a `B` so long as it doesn't hit an exception.
+  */
 case class Effect[-Req, +Resp, +A](ffi: Req => Resp,
                                    request: Req,
                                    continue: Either[Throwable, Resp] => A) {
@@ -18,9 +25,6 @@ object Effect {
     * Partial responses may not actually arrive.
     */
   type Partial[+Resp] = Either[Throwable, Resp]
-
-  def part[Resp](t: Throwable): Partial[Resp] = Left(t)
-  def here[Resp](r: Resp): Partial[Resp] = Right(r)
 
   /**
     * Eliminator for Effects ignorant to Request and Response type.
