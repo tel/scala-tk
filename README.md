@@ -6,6 +6,11 @@ monad" in the same vein as Scalaz's `IO` and `Task` types. You can
 use it to transform side-effecting, imperative APIs into ones which 
 can be combined purely and then executed all at once later.
 
+Construct libraries of side-effects happening in the `Tk` monad and
+compose them into larger effect chains deferring all side-effect
+execution until the very end. `Tk` provides opportunity for
+some amount of equational reason around side-effecting code.
+
 ## Status
 
 **Alpha**. `Tk` appears functional but needs more testing. 
