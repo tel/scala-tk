@@ -6,6 +6,15 @@ monad" in the same vein as Scalaz's `IO` and `Task` types. You can
 use it to transform side-effecting, imperative APIs into ones which 
 can be combined purely and then executed all at once later.
 
+## Status
+
+**Alpha**. `Tk` appears functional but needs more testing. 
+Furthermore, `Tk` is nowhere near as battle-tested as Scalaz's `IO`
+which additionally offers more features and integration into a 
+framework of other effects. Finally, while there is promise of good 
+performance with `Tk`'s Church-encoding tricks this has not been
+tested.
+
 ## Example
 
 ```scala
