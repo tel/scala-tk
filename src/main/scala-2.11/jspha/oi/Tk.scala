@@ -34,7 +34,7 @@ object Tk {
         run(Effect[Req, Resp, R](ffi, request, pure))
     }
 
-  def eff[Resp](ffi: => Resp): Tk[Partial[Resp]] = new Tk[Partial[Resp]] {
+  def effThunk[Resp](ffi: => Resp): Tk[Partial[Resp]] = new Tk[Partial[Resp]] {
     def apply[R](pure: Partial[Resp] => R, run: Effect.Runner[R]) =
       run(Effect[Unit, Resp, R](_ => ffi, (), pure))
   }

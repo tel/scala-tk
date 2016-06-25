@@ -36,11 +36,23 @@ class Main extends App {
       scala.io.StdIn.readLine()
     }
 
+  // Effects which may respond exceptionally can be wrapped by
+  // Tk.eff and Tk.effThunk directly, capturing their exceptions
+  // as values.
+  //
+  // If blowUp were defined using Unsafe.effThunk it would produce a
+  // runtime exception.
+  def blowUp: Tk[Either[Throwable, Nothing]] =
+    Tk.effThunk {
+      throw new Exception("Oh no!")
+    }
+
   // Compose Tk[A] values using for-comprehensions
   val tk: Tk[Unit] =
     for {
       _ <- write("Echo echo echo...")
       line <- read
+      _ <- blowUp
       _ <- write(line)
     } yield ()
 
