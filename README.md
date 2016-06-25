@@ -63,6 +63,18 @@ class Main extends App {
 }
 ```
 
+```
+Connected to the target VM, address: '127.0.0.1:61776', transport: 'socket'
+Welcome to Scala 2.11.8 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0).
+Type in expressions for evaluation. Or try :help.
+
+scala> (new jspha.oi.Main).main(Array())
+Echo echo echo...
+Hello, Tk
+
+Hello, Tk
+```
+
 ## Theory
 
 OI's `Tk` ("task" or "to come" in newspaper editor speak) is a 
