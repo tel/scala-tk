@@ -1,7 +1,7 @@
 
-# *Oi!* message-passing effect monad
+# *Tk*. A message-passing effect monad
 
-*Oi* aims to be an efficient, well-behaved "impure effect wrapper 
+*Tk* aims to be an efficient, well-behaved "impure effect wrapper 
 monad" in the same vein as Scalaz's `IO` and `Task` types. You can 
 use it to transform side-effecting, imperative APIs into ones which 
 can be combined purely and then executed all at once later.
@@ -68,7 +68,7 @@ Connected to the target VM, address: '127.0.0.1:61776', transport: 'socket'
 Welcome to Scala 2.11.8 (Java HotSpot(TM) 64-Bit Server VM, Java 1.8.0).
 Type in expressions for evaluation. Or try :help.
 
-scala> (new jspha.oi.Main).main(Array())
+scala> (new jspha.tk.Main).main(Array())
 Echo echo echo...
 Hello, Tk
 
@@ -77,7 +77,7 @@ Hello, Tk
 
 ## Theory
 
-OI's `Tk` ("task" or "to come" in newspaper editor speak) is a 
+The `Tk` ("task" or "to come" in newspaper editor speak) is a 
 certain kind of free monad over the *indexed store* 
 comonad. This provides *message-passing* semantics to "interacting 
 with the real world" which are amenable to good models for 
