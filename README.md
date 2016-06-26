@@ -96,7 +96,7 @@ the free monad over the indexed store comonad
 ```scala
 sealed trait Tkish[+A]
 case class Pure[+A](a: A) extends Tkish[A]
-case class Effect[-Req, +Resp, +A](
+case class Effect[Req, Resp, +A](
   ffi: FFIOperation[Request, Response],
   request: Request,
   continue: Response => Tkish[A]
@@ -124,7 +124,7 @@ it uses a Yoneda transformed version of the Free monad for
 efficiency and (b) it also contains an exception handler to properly
 account for the exceptions that may be thrown by `FFIOperation`s.
 
-### References and sources
+## References and sources
 
 Most of these ideas were elaborated by Ed Kmett in a series of posts 
 on https://comonad.com called "Free Monads for Less". Within these 
