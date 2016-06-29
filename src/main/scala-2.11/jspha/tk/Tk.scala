@@ -14,13 +14,14 @@ package jspha.tk
   * result value you can use the function `Tk.Unsafe.perform` to run the
   * effect chain and return the value.
   */
-trait Tk[E, +A] {
+trait Tk[+E, +A] {
 
   def apply[R](pure: A => R, fail: E => R, run: Effect.Runner[R]): R
 
   def map[B](f: A => B): Tk[E, B] = Tk.map(f)(this)
-  def bind[B](k: A => Tk[E, B]): Tk[E, B] = Tk.bind(k)(this)
-  def flatMap[B](k: A => Tk[E, B]): Tk[E, B] = Tk.bind(k)(this)
+  def ap[EE >: E, B](f: Tk[EE, A => B]): Tk[EE, B] = Tk.ap(f)(this)
+  def bind[EE >: E, B](k: A => Tk[EE, B]): Tk[EE, B] = Tk.bind(k)(this)
+  def flatMap[EE >: E, B](k: A => Tk[EE, B]): Tk[EE, B] = Tk.bind(k)(this)
 
   def forgetE[F >: E]: Tk[F, A] = Tk.forgetE(this)
   def mapE[F](f: E => F): Tk[F, A] = Tk.mapE(f)(this)
@@ -39,10 +40,10 @@ object Tk {
     */
   type Pure[A] = Tk[Nothing, A]
 
-  def apply[Resp](ffi: => Resp): Tk[Throwable, Resp] =
-    new Tk[Throwable, Resp] {
-      def apply[R](pure: Resp => R, fail: Throwable => R, run: Effect.Runner[R]) =
-        run(Effect[Unit, Resp, R](_ => ffi, (), fail, pure))
+  def apply[A](ffi: => A): Tk[Throwable, A] =
+    new Tk[Throwable, A] {
+      def apply[R](pure: A => R, fail: Throwable => R, run: Effect.Runner[R]) =
+        run(Effect[Unit, A, R](_ => ffi, (), fail, pure))
     }
 
 
@@ -51,6 +52,14 @@ object Tk {
       def apply[R](pure: Resp => R, fail: Throwable => R, run: Runner[R]) =
         run(Effect[Req, Resp, R](ffi, request, fail, pure))
     }
+
+  def pure[E, A](a: A): Tk[E, A] = new Tk[E, A] {
+    def apply[R](pure: A => R, fail: E => R, run: Runner[R]) = pure(a)
+  }
+
+  def except[E, A](e: E): Tk[E, A] = new Tk[E, A] {
+    def apply[R](pure: A => R, fail: E => R, run: Runner[R]) = fail(e)
+  }
 
   def caught[E, A](tk: Tk[E, A]): Tk[Nothing, Either[E, A]] =
     new Tk[Nothing, Either[E, A]] {
@@ -83,10 +92,6 @@ object Tk {
   def forgetE[E, A, F >: E](tk: Tk[E, A]): Tk[F, A] =
     mapE[E, A, F](_.asInstanceOf)(tk)
 
-  def pure[E, A](a: A): Tk[E, A] = new Tk[E, A] {
-    def apply[R](pure: A => R, fail: E => R, run: Runner[R]) = pure(a)
-  }
-
   def ap[E, A, B](tf: Tk[E, A => B])(ta: Tk[E, A]): Tk[E, B] = new Tk[E, B] {
     def apply[R](pure: B => R, fail: E => R, run: Runner[R]) =
       tf(f => ta(a => pure(f(a)), fail, run), fail, run)
@@ -102,11 +107,11 @@ object Tk {
     /**
       * Create an effect of no arguments identically to `eff`.
       */
-    def apply[Resp](ffi: => Resp): Tk[Nothing, Resp] =
-      new Tk[Nothing, Resp] {
-        def apply[R](pure: Resp => R, fail: Nothing => R, run: Runner[R]) = {
+    def apply[A](ffi: => A): Tk[Nothing, A] =
+      new Tk[Nothing, A] {
+        def apply[R](pure: A => R, fail: Nothing => R, run: Runner[R]) = {
           def thrower(t: Throwable) = throw t
-          run(Effect[Unit, Resp, R](_ => ffi, (), thrower, pure))
+          run(Effect[Unit, A, R](_ => ffi, (), thrower, pure))
         }
       }
 
