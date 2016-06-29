@@ -7,7 +7,7 @@ package jspha.tk
   * if they proceed unexceptionally.
   *
   * Basic, foundational elements of these `Tk` effect-chains can be built
-  * using the `Tk.eff` and `Tk.Unsafe.eff` combinators which wrap standard,
+  * using the `Tk` and `Tk.Safe` combinators which wrap standard,
   * side-effecting, unsafe Scala functions.
   *
   * When it is time to ultimately perform your `Tk` action to receive the
@@ -23,8 +23,9 @@ trait Tk[+E, +A] {
   def bind[EE >: E, B](k: A => Tk[EE, B]): Tk[EE, B] = Tk.bind(k)(this)
   def flatMap[EE >: E, B](k: A => Tk[EE, B]): Tk[EE, B] = Tk.bind(k)(this)
 
-  def forgetE[F >: E]: Tk[F, A] = Tk.forgetE(this)
-  def mapE[F](f: E => F): Tk[F, A] = Tk.mapE(f)(this)
+  def >>[EE >: E, B](tk: Tk[EE, B]): Tk[EE, B] = bind(_ => tk)
+
+  def handle[F](f: E => F): Tk[F, A] = Tk.mapE(f)(this)
   def caught: Tk[Nothing, Either[E, A]] = Tk.caught(this)
   def caughtOption: Tk[Nothing, Option[A]] = Tk.caughtOption(this)
 
@@ -34,12 +35,6 @@ object Tk {
 
   import Effect.Runner
 
-  /**
-    * A `Tk` is considered to be pure if no exceptions are thrown by effects
-    * within it.
-    */
-  type Pure[A] = Tk[Nothing, A]
-
   def apply[A](ffi: => A): Tk[Throwable, A] =
     new Tk[Throwable, A] {
       def apply[R](pure: A => R, fail: Throwable => R, run: Effect.Runner[R]) =
@@ -47,7 +42,7 @@ object Tk {
     }
 
 
-  def eff[Req, Resp](ffi: Req => Resp)(request: Req): Tk[Throwable, Resp] =
+  def fn[Req, Resp](ffi: Req => Resp)(request: Req): Tk[Throwable, Resp] =
     new Tk[Throwable, Resp] {
       def apply[R](pure: Resp => R, fail: Throwable => R, run: Runner[R]) =
         run(Effect[Req, Resp, R](ffi, request, fail, pure))
@@ -89,9 +84,6 @@ object Tk {
       fa(pure, f andThen fail, run)
   }
 
-  def forgetE[E, A, F >: E](tk: Tk[E, A]): Tk[F, A] =
-    mapE[E, A, F](_.asInstanceOf)(tk)
-
   def ap[E, A, B](tf: Tk[E, A => B])(ta: Tk[E, A]): Tk[E, B] = new Tk[E, B] {
     def apply[R](pure: B => R, fail: E => R, run: Runner[R]) =
       tf(f => ta(a => pure(f(a)), fail, run), fail, run)
@@ -102,10 +94,16 @@ object Tk {
       fa(k(_)(pure, fail, run), fail, run)
   }
 
-  object Unsafe {
+  /**
+    * A `Tk` is considered to be pure if no exceptions are thrown by effects
+    * within it.
+    */
+  type Safe[A] = Tk[Nothing, A]
+
+  object Safe {
 
     /**
-      * Create an effect of no arguments identically to `eff`.
+      * Create an effect of no arguments identically to `fn`.
       */
     def apply[A](ffi: => A): Tk[Nothing, A] =
       new Tk[Nothing, A] {
@@ -121,26 +119,29 @@ object Tk {
       * then you may see exceptions thrown at runtime instead of being
       * propagated.
       */
-    def eff[Req, Resp](ffi: Req => Resp)(request: Req): Tk[Nothing, Resp] =
+    def fn[Req, Resp](ffi: Req => Resp)(request: Req): Tk[Nothing, Resp] =
       new Tk[Nothing, Resp] {
         def apply[R](pure: Resp => R, fail: Nothing => R, run: Runner[R]) = {
           def thrower(t: Throwable) = throw t
           run(Effect[Req, Resp, R](ffi, request, thrower, pure))
         }
       }
+  }
+
+  object Run {
 
     /**
       * Extract the result inner value, running all intermediate effects. If
       * any exceptions are encountered then they will be captured purely.
       */
-    def perform[E, A](tk: Tk[E, A]): Either[E, A] =
+    def apply[E, A](tk: Tk[E, A]): Either[E, A] =
       tk(Right(_), Left(_), Effect.perform)
 
     /**
       * Extract the result inner value, running all intermediate effects. If
       * any exceptions are encountered then they will now be raised.
       */
-    def performThrowing[E <: Throwable, A](tk: Tk[E, A]): A = {
+    def throwing[E <: Throwable, A](tk: Tk[E, A]): A = {
       def thrower(t: Throwable) = throw t
       tk(identity _, thrower, Effect.perform)
     }
@@ -148,7 +149,7 @@ object Tk {
     /**
       * Extract the result value, running all intermediate effects.
       */
-    def performPure[A](tk: Pure[A]): A = {
+    def pure[A](tk: Safe[A]): A = {
       def elimNothing[R](n: Nothing): R = sys.error("Received Nothing")
       tk(identity _, elimNothing, Effect.perform)
     }

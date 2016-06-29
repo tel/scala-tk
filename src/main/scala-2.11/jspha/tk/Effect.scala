@@ -1,5 +1,7 @@
 package jspha.tk
 
+import scala.util.control.ControlThrowable
+
 /**
   * An effect represents a "Thunked" effectful "FFI" call. Or, more
   * concretely, if `ffi` is an effectful Scala function `A => B` then
@@ -24,6 +26,9 @@ object Effect {
       try {
         eff.continue(eff.ffi(eff.request))
       } catch {
+        // We don't want to interfere with control, se
+        // http://www.scala-lang.org/api/2.10.3/index.html#scala.util.control.ControlThrowable
+        case e: ControlThrowable => throw e
         case e: Throwable => eff.fail(e)
       }
   }

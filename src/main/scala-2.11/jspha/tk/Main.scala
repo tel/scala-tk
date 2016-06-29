@@ -2,17 +2,15 @@ package jspha.tk
 
 class Main extends App {
 
-  // Create new safe effect-presentations using Unsafe.eff
-  def write(string: String): Tk.Pure[Unit] =
-    Tk.Unsafe { println(string) }
+  // Create new safe effect-presentations using Safe
+  def write(string: String): Tk.Safe[Unit] =
+    Tk.Safe { println(string) }
 
-  // If your effect doesn't take an argument, Unsafe.effThunk may be
-  // slightly more convenient.
-  def read: Tk.Pure[String] =
-    Tk.Unsafe { scala.io.StdIn.readLine() }
+  def read: Tk.Safe[String] =
+    Tk.Safe { scala.io.StdIn.readLine() }
 
   // Effects which may respond exceptionally can be wrapped by
-  // Tk.eff and Tk.effThunk directly, capturing their exceptions
+  // Tk and Tk.fn directly, capturing their exceptions
   // as values.
   //
   // If blowUp were defined using Unsafe.effThunk it would produce a
@@ -23,14 +21,13 @@ class Main extends App {
   // Compose Tk[A] values using for-comprehensions
   val tk: Tk[Throwable, Unit] =
     for {
-      _ <- write("Echo echo echo...")
-      line <- read
-      _ <- blowUp
-      _ <- write(line)
-    } yield ()
+      line <- write("Echo echo echo...") >> read
+      ret <- blowUp >> write(line)
+    } yield ret
 
   // Then, finally, when it's time to perform your effects do so
-  // using the Unsafe.perform function.
-  Tk.Unsafe.perform(tk)
+  // using the Run function.
+  Tk.Run(tk)
 
 }
+
