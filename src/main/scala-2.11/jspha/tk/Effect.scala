@@ -9,12 +9,15 @@ import scala.util.control.ControlThrowable
   * Partial[B]]` indicating that when this effect is (later) performed it
   * will return a `B` so long as it doesn't hit an exception.
   */
-case class Effect[Req, Resp, +A](ffi: Req => Resp,
+case class Effect[Req, Resp, +R](ffi: Req => Resp,
                                  request: Req,
-                                 fail: Throwable => A,
-                                 continue: Resp => A)
+                                 fail: Throwable => R,
+                                 continue: Resp => R)
 
 object Effect {
+
+  def apply[Req, Resp](ffi: Req => Resp)(req: Req): Effect[Req, Resp, Either[Throwable, Resp]] =
+    Effect(ffi, req, Left(_), Right(_))
 
   trait Runner[R] {
     def apply[Req, Resp](eff: Effect[Req, Resp, R]): R
