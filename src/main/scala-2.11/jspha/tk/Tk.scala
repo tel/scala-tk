@@ -1,5 +1,7 @@
 package jspha.tk
 
+import cats.{Functor, Applicative, Monad}
+
 /**
   * Safe "unsafe effect" wrapper monad similar to Scalaz's `IO` type.
   * Values of `Tk[A]` may be pure computations returning values `A` or
@@ -18,12 +20,12 @@ trait Tk[+E, +A] {
 
   def apply[R](pure: A => R, fail: E => R, run: Effect.Runner[R]): R
 
-  def map[B](f: A => B): Tk[E, B] = Tk.map(f)(this)
-  def ap[EE >: E, B](f: Tk[EE, A => B]): Tk[EE, B] = Tk.ap(f)(this)
-  def bind[EE >: E, B](k: A => Tk[EE, B]): Tk[EE, B] = Tk.bind(k)(this)
-  def flatMap[EE >: E, B](k: A => Tk[EE, B]): Tk[EE, B] = Tk.bind(k)(this)
-
-  def >>[EE >: E, B](tk: Tk[EE, B]): Tk[EE, B] = bind(_ => tk)
+//  def map[B](f: A => B): Tk[E, B] = Tk.map(f)(this)
+//  def ap[EE >: E, B](f: Tk[EE, A => B]): Tk[EE, B] = Tk.ap(f)(this)
+//  def flatMap[EE >: E, B](k: A => Tk[EE, B]): Tk[EE, B] =
+//    flatMap[EE, E, A, B](this)(k)
+//
+//  def >>[EE >: E, B](tk: Tk[EE, B]): Tk[EE, B] = flatMap(_ => tk)
 
   def handle[F](f: E => F): Tk[F, A] = Tk.mapE(f)(this)
   def caught: Tk[Nothing, Either[E, A]] = Tk.caught(this)
@@ -34,6 +36,40 @@ trait Tk[+E, +A] {
 object Tk {
 
   import Effect.Runner
+
+  sealed class TkFunctor[E] extends Functor[({type l[A] = Tk[E, A]})#l] {
+    def map[A, B](fa: Tk[E, A])(f: A => B): Tk[E, B] = new Tk[E, B] {
+      def apply[R](pure: B => R, fail: E => R, run: Runner[R]) =
+        fa(f andThen pure, fail, run)
+    }
+  }
+
+  sealed trait TkApplicative[E]
+    extends TkFunctor[E]
+      with Applicative[({type l[A] = Tk[E, A]})#l] {
+
+    def pure[A](x: A) =
+      new Tk[E, A] {
+        def apply[R](pure: A => R, fail: E => R, run: Runner[R]) = pure(x)
+      }
+
+    def ap[A, B](tf: Tk[E, A => B])(ta: Tk[E, A]): Tk[E, B] = new Tk[E, B] {
+      def apply[R](pure: B => R, fail: E => R, run: Runner[R]) =
+        tf(f => ta(a => pure(f(a)), fail, run), fail, run)
+    }
+
+  }
+
+  sealed trait TkMonad[E]
+    extends TkApplicative[E]
+      with Monad[({type l[A] = Tk[E, A]})#l] {
+
+    def flatMap[EE >: E, A, B](fa: Tk[E, A])(f: A => Tk[EE, B]) =
+      new Tk[EE, B] {
+        def apply[R](pure: B => R, fail: EE => R, run: Effect.Runner[R]) =
+          fa(f(_)(pure, fail, run), fail, run)
+      }
+  }
 
   def apply[A](ffi: => A): Tk[Throwable, A] =
     new Tk[Throwable, A] {
@@ -47,10 +83,6 @@ object Tk {
       def apply[R](pure: Resp => R, fail: Throwable => R, run: Runner[R]) =
         run(Effect[Req, Resp, R](ffi, request, fail, pure))
     }
-
-  def pure[E, A](a: A): Tk[E, A] = new Tk[E, A] {
-    def apply[R](pure: A => R, fail: E => R, run: Runner[R]) = pure(a)
-  }
 
   def except[E, A](e: E): Tk[E, A] = new Tk[E, A] {
     def apply[R](pure: A => R, fail: E => R, run: Runner[R]) = fail(e)
@@ -74,25 +106,16 @@ object Tk {
       }
     }
 
-  def map[E, A, B](f: A => B)(fa: Tk[E, A]): Tk[E, B] = new Tk[E, B] {
-    def apply[R](pure: B => R, fail: E => R, run: Runner[R]) =
-      fa(f andThen pure, fail, run)
-  }
-
   def mapE[E, A, F](f: E => F)(fa: Tk[E, A]): Tk[F, A] = new Tk[F, A] {
     def apply[R](pure: A => R, fail: F => R, run: Runner[R]) =
       fa(pure, f andThen fail, run)
   }
 
-  def ap[E, A, B](tf: Tk[E, A => B])(ta: Tk[E, A]): Tk[E, B] = new Tk[E, B] {
-    def apply[R](pure: B => R, fail: E => R, run: Runner[R]) =
-      tf(f => ta(a => pure(f(a)), fail, run), fail, run)
-  }
-
-  def bind[E, A, B](k: A => Tk[E, B])(fa: Tk[E, A]): Tk[E, B] = new Tk[E, B] {
-    def apply[R](pure: B => R, fail: E => R, run: Effect.Runner[R]) =
-      fa(k(_)(pure, fail, run), fail, run)
-  }
+//  def flatMap[EE >: E, E, A, B](fa: Tk[E, A])(k: A => Tk[EE, B]): Tk[EE, B] =
+//    new Tk[EE, B] {
+//      def apply[R](pure: B => R, fail: EE => R, run: Effect.Runner[R]) =
+//        fa(k(_)(pure, fail, run), fail, run)
+//    }
 
   /**
     * A `Tk` is considered to be pure if no exceptions are thrown by effects
