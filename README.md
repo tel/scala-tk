@@ -90,7 +90,7 @@ the free monad over the indexed store comonad
 ```scala
 sealed trait Tkish[+A]
 case class Pure[+A](a: A) extends Tkish[A]
-case class Effect[Req, Resp, +A](
+case class Effect[Request, Response, +A](
   ffi: FFIOperation[Request, Response],
   request: Request,
   continue: Response => Tkish[A]
@@ -110,7 +110,7 @@ runtime using the `FFIOperation` type the interpretation behavior of
 effectful language we immediately have
 
 ```scala
-type FFIOperation[-Req, +Resp] = Req => Resp
+type FFIOperation[-Request, +Response] = Request => Response
 ```
 
 In practice, the actual `Tk` monad is identical to this except (a)
